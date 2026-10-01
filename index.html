@@ -1,57 +1,37 @@
-<div id="snackstop"></div>
-<style>
-#snackstop{max-width:520px;margin:0 auto;padding:20px 16px;background:#fffaf0;color:#2b2118;border-radius:12px;font:16px/1.4 system-ui,sans-serif;box-sizing:border-box}
-#snackstop *{box-sizing:border-box}
-#snackstop h1{margin:0 0 4px;font-size:28px;color:#2b2118}
-#snackstop .mu{color:#7a6a5a}
-#snackstop .card{background:#fff;border:1px solid #ead9c2;border-radius:12px;padding:14px;margin:12px 0}
-#snackstop input{width:100%;padding:10px;margin:6px 0;border:1px solid #ead9c2;border-radius:8px;background:#fffaf0;color:#2b2118;font:inherit}
-#snackstop .btn,#snackstop button{display:inline-block;background:#e8590c;color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer;text-decoration:none;margin:4px 4px 4px 0}
-#snackstop .g{background:transparent;color:#2b2118;border:1px solid #ead9c2}
-#snackstop .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-#snackstop .off{opacity:.5}
-#snackstop .err{color:#c92a2a}
-</style>
-<script id="ss-data" type="application/json">{"name":"Snack Stop","tag":"Cheap snacks, hand-delivered at school.","email":"unrealcracker99@gmail.com","items":[{"id":1,"name":"Chips","price":1.5,"qty":10},{"id":2,"name":"Candy bar","price":1,"qty":12},{"id":3,"name":"Cookie","price":1.25,"qty":0},{"id":4,"name":"Water bottle","price":1,"qty":8}],"ok":[]}</script>
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Snack Stop</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;background:#fffaf0;color:#2b2118;font:16px/1.4 system-ui,sans-serif}main{max-width:520px;margin:0 auto;padding:20px 16px}
+.card{background:#fff;border:1px solid #ead9c2;border-radius:12px;padding:14px;margin:12px 0}
+input{width:100%;box-sizing:border-box;padding:10px;margin:6px 0;border:1px solid #ead9c2;border-radius:8px;font:inherit}
+button{background:#e8590c;color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer;margin:4px 4px 4px 0}
+button.g{background:#fff;color:#2b2118;border:1px solid #ead9c2}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mu{color:#7a6a5a;font-size:14px}.off{opacity:.5}.m{color:#c2410c}</style></head><body><main id="app"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
 <script>
-(function(){
-var root=document.getElementById('snackstop');
-var S=JSON.parse(document.getElementById('ss-data').textContent),v='gate',me=null,cur=null,q=1,msg='',req='';
-function $(s){return root.querySelector(s)}
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-async function sha(t){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}
-function key(f,l,s){return sha([f,l,s].map(function(x){return x.trim().toLowerCase()}).join('|'))}
-function mail(sub,body){return 'mailto:'+S.email+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)}
-function render(){
- var h='<h1>🍿 '+esc(S.name)+'</h1><div class="mu">'+esc(S.tag)+'</div>';
- if(v==='gate'){
-  h+='<div class="card"><b>Who are you?</b><input id="ss-f" placeholder="First name"><input id="ss-l" placeholder="Last name"><input id="ss-n" placeholder="S number"><button data-a="enter">Enter</button><button class="g" data-a="req">Request access</button><div class="err">'+esc(msg)+'</div><div class="mu" style="font-size:14px">First time? Tap Request access, send the email, and come back once you are approved.</div></div>';
- }else if(v==='sent'){
-  h+='<div class="card"><b>Almost done</b><p>Tap below and send the email that opens. You can enter once you are approved.</p><a class="btn" target="_top" href="'+esc(req)+'">Email my request</a><button class="g" data-a="back">Back</button></div>';
- }else if(v==='shop'){
-  h+='<p>Hi '+esc(me.f)+'! Pick a snack.</p>';
-  S.items.forEach(function(i){var ok=i.qty>0;h+='<div class="card row '+(ok?'':'off')+'"><div><b>'+esc(i.name)+'</b><div class="mu">$'+i.price.toFixed(2)+' · '+(ok?i.qty+' in stock':'Sold out')+'</div></div>'+(ok?'<button data-a="pick" data-id="'+i.id+'">Order</button>':'<span class="mu">—</span>')+'</div>'});
- }else if(v==='order'){
-  var t=(cur.price*q).toFixed(2);
-  h+='<div class="card"><b>'+esc(cur.name)+'</b> · $'+cur.price.toFixed(2)+' each<div class="row" style="margin:10px 0"><button class="g" data-a="dn">−</button><b>'+q+'</b><button class="g" data-a="up">+</button></div><div>Total: <b>$'+t+'</b></div><p class="mu" style="font-size:14px">Tap the button to email your order. It will be brought to school tomorrow.</p><a class="btn" target="_top" href="'+esc(mail('Snack order','Order from '+me.f+' '+me.l+':\n'+q+' x '+cur.name+' ($'+t+')\nPlease bring to school tomorrow.'))+'">Email my order</a><button class="g" data-a="shop">Back</button></div>';
- }
- var box=root.querySelector('#ss-view');if(!box){box=document.createElement('div');box.id='ss-view';root.appendChild(box)}
- box.innerHTML=h;
-}
-root.addEventListener('click',async function(e){
- var b=e.target.closest('[data-a]');if(!b)return;var a=b.dataset.a;
- if(a==='enter'||a==='req'){
-  var f=$('#ss-f').value,l=$('#ss-l').value,n=$('#ss-n').value;
-  if(!f.trim()||!l.trim()||!n.trim()){msg='Fill in all three boxes.';return render()}
-  if(a==='enter'){if(S.ok.indexOf(await key(f,l,n))>-1){me={f:f.trim(),l:l.trim()};msg='';v='shop'}else msg='Not approved yet.'}
-  else{req=mail('Snack Stop access request','First: '+f.trim()+'\nLast: '+l.trim()+'\nS number: '+n.trim());v='sent';msg=''}
- }else if(a==='back'){v='gate'}
- else if(a==='pick'){cur=S.items.find(function(i){return i.id==b.dataset.id});q=1;v='order'}
- else if(a==='up'){if(q<cur.qty)q++}
- else if(a==='dn'){if(q>1)q--}
- else if(a==='shop'){v='shop'}
- render();
-});
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let v='gate',me={},items=[],cur,q=1,msg='';
+async function load(){const{data}=await sb.from('items').select('*').order('id');items=data||[]}
+function render(){let h='<h1>🍿 Snack Stop</h1><div class="mu">Cheap snacks, hand-delivered at school.</div>';
+ if(v==='gate')h+=`<div class="card"><b>Who are you?</b><input id="f" placeholder="First name"><input id="l" placeholder="Last name"><input id="n" placeholder="S number"><button data-a="enter">Enter</button><button class="g" data-a="req">Request access</button><p class="m">${esc(msg)}</p><div class="mu">First time? Tap Request access, then come back once you're approved.</div></div>`;
+ else if(v==='shop'){h+=`<p>Hi ${esc(me.f)}! Pick a snack.</p><p class="m">${esc(msg)}</p>`;
+  items.forEach(i=>{const ok=i.qty>0;h+=`<div class="card row ${ok?'':'off'}"><div><b>${esc(i.name)}</b><div class="mu">$${Number(i.price).toFixed(2)} · ${ok?i.qty+' in stock':'Sold out'}</div></div>${ok?`<button data-a="pick" data-id="${i.id}">Order</button>`:''}</div>`})}
+ else if(v==='order')h+=`<div class="card"><b>${esc(cur.name)}</b> · $${Number(cur.price).toFixed(2)} each<div class="row" style="margin:10px 0"><button class="g" data-a="dn">−</button><b>${q}</b><button class="g" data-a="up">+</button></div>Total: <b>$${(cur.price*q).toFixed(2)}</b><p class="m">${esc(msg)}</p><button data-a="buy">Place order</button><button class="g" data-a="shop">Back</button></div>`;
+ else h+=`<div class="card"><b>Order placed! ✅</b><p>It will be brought to school tomorrow.</p><button data-a="shop">Back to snacks</button></div>`;
+ $('#app').innerHTML=h}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;msg='';
+ try{
+ if(a==='enter'||a==='req'){const f=$('#f').value.trim(),l=$('#l').value.trim(),n=$('#n').value.trim();
+  if(!f||!l||!n){msg='Fill in all three boxes.'}else{me={f,l,n};
+   const{data,error}=await sb.rpc(a==='enter'?'check_access':'request_access',{p_first:f,p_last:l,p_s:n});if(error)throw error;
+   if(a==='enter'){if(data==='approved'){await load();v='shop'}else msg={pending:'Still waiting for approval.',denied:'Not approved.',none:'No request found. Tap Request access.'}[data]||'Try again.'}
+   else msg=data==='approved'?"You're already approved. Tap Enter.":data==='invalid'?'Check your entries.':"Request sent! Come back once you're approved."}}
+ else if(a==='pick'){cur=items.find(i=>i.id==b.dataset.id);q=1;v='order'}
+ else if(a==='up'){if(q<cur.qty)q++}else if(a==='dn'){if(q>1)q--}
+ else if(a==='shop'){await load();v='shop'}
+ else if(a==='buy'){const{data,error}=await sb.rpc('place_order',{p_first:me.f,p_last:me.l,p_s:me.n,p_item:cur.id,p_qty:q});if(error)throw error;
+  if(data==='ok')v='done';else{msg={out_of_stock:'Sorry, not enough left.',not_approved:'Not approved.'}[data]||'Could not order.';await load()}}
+ }catch(x){msg='Something went wrong. Try again.'}
+ render()});
 render();
-})();
-</script>
+</script></body></html>
