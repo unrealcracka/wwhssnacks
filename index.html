@@ -19,8 +19,11 @@ async function load(){const{data}=await sb.from('items').select('*').order('id')
 function render(){let h='<h1>🍿 Snack Stop</h1><div class="mu">Cheap snacks, hand-delivered at school.</div>';
  if(v==='gate')h+=`<div class="card"><b>Who are you?</b><input id="f" placeholder="First name" value="${esc(ff)}"><input id="l" placeholder="Last name" value="${esc(ll)}"><input id="n" placeholder="S number" value="${esc(nn)}"><div class="mu" style="margin-top:8px">Which A day do you want delivery on?</div><button class="${day==='orange'?'':'g'}" data-a="day" data-d="orange">${KIND.orange}</button><button class="${day==='white'?'':'g'}" data-a="day" data-d="white">${KIND.white}</button><div><button data-a="enter">Enter</button><button class="g" data-a="req">Request access</button></div><p class="m">${esc(msg)}</p><div class="mu">First time? Tap Request access, then come back once you're approved.</div>${FINE}</div>`;
  else if(v==='shop'){h+=`<p>Hi ${esc(me.f)}! Delivery: <b>${KIND[day]}</b></p><p class="m">${esc(msg)}</p>`;
-  if(mine.length)h+=`<div class="card"><b>Your orders</b>${mine.map(o=>`<div class="mu" style="margin-top:6px">${o.qty} × ${esc(o.item_name)} — ${o.status==='delivered'?'Delivered ✅':o.status==='scheduled'?'<b>Arriving '+fmt(o.delivery_date)+'</b> ('+KIND[o.day_kind]+')':'Waiting for a delivery date…'}</div>`).join('')}</div>`;
+  const act=mine.filter(o=>o.status!=='delivered'),pastN=mine.length-act.length;
+  if(act.length)h+=`<div class="card"><b>Your orders</b>${act.map(o=>`<div class="mu" style="margin-top:6px">${o.qty} × ${esc(o.item_name)} — ${o.status==='scheduled'?'<b>Arriving '+fmt(o.delivery_date)+'</b> ('+KIND[o.day_kind]+')':'Waiting for a delivery date…'}</div>`).join('')}</div>`;
+  if(pastN)h+=`<button class="g" data-a="past">Past orders (${pastN})</button>`;
   items.forEach(i=>{const ok=i.qty>0;h+=`<div class="card row ${ok?'':'off'}"><div><b>${esc(i.name)}</b><div class="mu">$${Number(i.price).toFixed(2)} · ${ok?i.qty+' in stock':'Sold out'}</div></div>${ok?`<button data-a="pick" data-id="${i.id}">Order</button>`:''}</div>`});h+=FINE}
+ else if(v==='past'){h+=`<div class="card"><b>Past orders</b>${mine.filter(o=>o.status==='delivered').map(o=>`<div class="mu" style="margin-top:6px">${o.qty} × ${esc(o.item_name)} — Delivered ✅${o.delivery_date?' '+fmt(o.delivery_date):''}</div>`).join('')||'<div class="mu">None yet.</div>'}<button class="g" data-a="shop">Back to snacks</button></div>`}
  else if(v==='order')h+=`<div class="card"><b>${esc(cur.name)}</b> · $${Number(cur.price).toFixed(2)} each<div class="row" style="margin:10px 0"><button class="g" data-a="dn">−</button><b>${q}</b><button class="g" data-a="up">+</button></div>Total: <b>$${(cur.price*q).toFixed(2)}</b><div class="mu">Delivery: ${KIND[day]}</div><p class="m">${esc(msg)}</p><button data-a="buy">Place order</button><button class="g" data-a="shop">Back</button>${FINE}</div>`;
  else h+=`<div class="card"><b>Order placed! ✅</b><p>I'll pick a delivery date soon. Come back and log in to see it under "Your orders".</p><p>I'll be sitting outside by a bench. You'll have to find me!</p><button data-a="shop">Back to snacks</button></div>`;
  $('#app').innerHTML=h}
@@ -35,6 +38,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]')
    else msg=data==='approved'?"You're already approved. Tap Enter.":data==='invalid'?'Check your entries.':"Request sent! Come back once you're approved."}}
  else if(a==='pick'){cur=items.find(i=>i.id==b.dataset.id);q=1;v='order'}
  else if(a==='up'){if(q<cur.qty)q++}else if(a==='dn'){if(q>1)q--}
+ else if(a==='past'){v='past'}
  else if(a==='shop'){await load();v='shop'}
  else if(a==='buy'){const{data,error}=await sb.rpc('place_order',{p_first:me.f,p_last:me.l,p_s:me.n,p_item:cur.id,p_qty:q,p_day:day});if(error)throw error;
   if(data==='ok'){await load();v='done'}else{msg={out_of_stock:'Sorry, not enough left.',not_approved:'Not approved.'}[data]||'Could not order.';await load()}}
