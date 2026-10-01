@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Admin</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<style>body{margin:0;background:#f4f1ec;color:#222;font:16px/1.4 system-ui,sans-serif}main{max-width:620px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;margin:10px 0}
+input,select{box-sizing:border-box;padding:9px;margin:4px 0;border:1px solid #ccc;border-radius:8px;font:inherit}
+button{background:#2f6fdb;color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer;margin:2px}
+button.g{background:#fff;color:#222;border:1px solid #ccc}button.r{background:#c92a2a}.row{display:flex;gap:6px;align-items:center;justify-content:space-between}
+.mu{color:#777;font-size:14px}.m{color:#c92a2a}</style></head><body><main id="app"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script>
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KIND={orange:'🟠 Orange A',white:'⚪ White A'};
+const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+let tab='ord',D={requests:[],orders:[],items:[],days:[]},msg='',on=false;
+async function load(){const R=await Promise.all([sb.from('requests').select('*').order('created_at',{ascending:false}),sb.from('orders').select('*').order('created_at',{ascending:false}),sb.from('items').select('*').order('id'),sb.from('delivery_days').select('*').order('day')]);
+ if(R.some(x=>x.error)){msg='Not allowed or error loading.';on=false}else D={requests:R[0].data,orders:R[1].data,items:R[2].data,days:R[3].data};render()}
+function render(){let h='<h2>Snack Stop · Admin</h2>';
+ if(!on)h+=`<div class="card"><input id="e" type="email" placeholder="Email"><br><input id="p" type="password" placeholder="Password"><br><button data-a="login">Log in</button><p class="m">${esc(msg)}</p></div>`;
+ else{const today=new Date().toLocaleDateString('en-CA'),nn=D.orders.filter(o=>o.status==='new').length,np=D.requests.filter(r=>r.status==='pending').length;
+  const T=(k,l)=>`<button class="${tab===k?'':'g'}" data-a="t" data-t="${k}">${l}</button>`;
+  h+=`<div>${T('ord','Orders ('+nn+')')}${T('past','Past orders')}${T('req','Requests ('+np+')')}${T('day','Days')}${T('itm','Snacks')}<button class="g" data-a="ref">↻</button><button class="g" data-a="out">Log out</button></div><p class="m">${esc(msg)}</p>`;
+  if(tab==='req')D.requests.forEach(r=>{h+=`<div class="card row"><div><b>${esc(r.first_name)} ${esc(r.last_name)}</b> · ${esc(r.s_number)}<div class="mu">${r.status}</div></div><div>${r.status!=='approved'?`<button data-a="st" data-id="${r.id}" data-s="approved">Approve</button>`:''}${r.status!=='denied'?`<button class="r" data-a="st" data-id="${r.id}" data-s="denied">${r.status==='approved'?'Revoke':'Deny'}</button>`:''}</div></div>`});
+  if(tab==='ord')D.orders.filter(o=>o.status!=='delivered').forEach(o=>{const up=D.days.filter(d=>d.kind===o.day_kind&&d.day>=today).slice(0,4);
+   h+=`<div class="card"><b>${esc(o.student)}</b>: ${o.qty} × ${esc(o.item_name)} ($${Number(o.total).toFixed(2)})<div class="mu">${KIND[o.day_kind]||'No day chosen'} · ${o.status==='scheduled'?'arriving '+fmt(o.delivery_date):o.status} · ordered ${new Date(o.created_at).toLocaleDateString()}</div>`+
+   (o.status==='new'?(up.length?`<div class="mu">Pick a delivery date (student sees it):</div>`+up.map(d=>`<button data-a="sch" data-id="${o.id}" data-d="${d.day}">${fmt(d.day)}</button>`).join(''):`<div class="mu">No upcoming ${KIND[o.day_kind]||''} dates. Add some in the Days tab.</div>`):'')+
+   (o.status==='scheduled'?`<button data-a="del" data-id="${o.id}">Delivered</button><button class="g" data-a="resch" data-id="${o.id}">Change date</button>`:'')+`</div>`});
+  if(tab==='past'){const pd=D.orders.filter(o=>o.status==='delivered');if(!pd.length)h+='<p class="mu">No delivered orders yet.</p>';pd.forEach(o=>{h+=`<div class="card"><b>${esc(o.student)}</b>: ${o.qty} × ${esc(o.item_name)} ($${Number(o.total).toFixed(2)})<div class="mu">${KIND[o.day_kind]||''} · delivered${o.delivery_date?' '+fmt(o.delivery_date):''}</div></div>`})}
+  if(tab==='day'){h+=`<div class="card"><b>Add a delivery day</b><div class="mu">Enter days you can deliver and which kind of A day each is.</div><input id="dd" type="date"> <select id="dk"><option value="orange">🟠 Orange A</option><option value="white">⚪ White A</option></select> <button data-a="addday">Add</button></div>`;
+   D.days.forEach(d=>{h+=`<div class="card row"><span>${fmt(d.day)} · ${KIND[d.kind]}${d.day<today?' <span class="mu">(past)</span>':''}</span><button class="r" data-a="rmday" data-id="${d.id}">✕</button></div>`})}
+  if(tab==='itm'){h+='<div class="mu">Name · price · in stock</div>';D.items.forEach(i=>{h+=`<div class="card row"><input data-id="${i.id}" data-f="name" value="${esc(i.name)}" style="flex:1"><input data-id="${i.id}" data-f="price" type="number" step="0.05" value="${i.price}" style="width:75px"><input data-id="${i.id}" data-f="qty" type="number" value="${i.qty}" style="width:65px"><button class="r" data-a="rm" data-id="${i.id}">✕</button></div>`});h+='<button data-a="save">Save changes</button><button class="g" data-a="add">+ Add snack</button>'}}
+ $('#app').innerHTML=h}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;msg='';let er;
+ if(a==='login'){const{error}=await sb.auth.signInWithPassword({email:$('#e').value.trim(),password:$('#p').value});if(error){msg='Wrong email or password.';return render()}on=true;return load()}
+ if(a==='out'){await sb.auth.signOut();on=false;return render()}
+ if(a==='t'){tab=b.dataset.t;return render()}
+ if(a==='ref')return load();
+ if(a==='st')er=(await sb.from('requests').update({status:b.dataset.s}).eq('id',id)).error;
+ if(a==='sch')er=(await sb.from('orders').update({status:'scheduled',delivery_date:b.dataset.d}).eq('id',id)).error;
+ if(a==='resch')er=(await sb.from('orders').update({status:'new',delivery_date:null}).eq('id',id)).error;
+ if(a==='del')er=(await sb.from('orders').update({status:'delivered'}).eq('id',id)).error;
+ if(a==='addday'){const d=$('#dd').value;if(!d){msg='Pick a date first.'}else er=(await sb.from('delivery_days').insert({day:d,kind:$('#dk').value})).error}
+ if(a==='rmday')er=(await sb.from('delivery_days').delete().eq('id',id)).error;
+ if(a==='add')er=(await sb.from('items').insert({name:'New snack',price:1,qty:0})).error;
+ if(a==='rm'&&confirm('Delete this snack?'))er=(await sb.from('items').delete().eq('id',id)).error;
+ if(a==='save'){for(const i of D.items){const g=f=>document.querySelector(`[data-id="${i.id}"][data-f="${f}"]`).value;
+  const r=await sb.from('items').update({name:g('name'),price:Math.max(0,+g('price')||0),qty:Math.max(0,Math.floor(+g('qty')||0))}).eq('id',i.id);if(r.error)er=r.error}if(!er)msg='Saved ✅'}
+ if(er)msg=er.code==='23505'?'That date is already added.':'Error: '+er.message;await load();});
+sb.auth.getSession().then(({data})=>{on=!!data.session;on?load():render()});
+</script></body></html>
