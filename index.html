@@ -12,28 +12,28 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY),$=s=>document.querySel
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KIND={orange:'🟠 Orange A day',white:'⚪ White A day'};
 const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-const FINE='<p class="fine">Fine print: this only works for <b>A lunch</b>. I will be sitting outside by a bench, and you will have to find me.</p>';
-let v='gate',me={},items=[],mine=[],cur,q=1,msg='',day='',ff='',ll='',nn='';
+const FINE='<p class="fine">Fine print: this only works for <b>A lunch</b>.</p>';
+let v='gate',me={},items=[],mine=[],cur,q=1,msg='',day='',ff='',ll='',nn='',pp='';
 async function load(){const{data}=await sb.from('items').select('*').order('id');items=data||[];
  const r=await sb.rpc('my_orders',{p_first:me.f,p_last:me.l,p_s:me.n});mine=r.data||[]}
 function render(){let h='<h1>🍿 Snack Stop</h1><div class="mu">Cheap snacks, hand-delivered at school.</div>';
- if(v==='gate')h+=`<div class="card"><b>Who are you?</b><input id="f" placeholder="First name" value="${esc(ff)}"><input id="l" placeholder="Last name" value="${esc(ll)}"><input id="n" placeholder="S number" value="${esc(nn)}"><div class="mu" style="margin-top:8px">Which A day do you want delivery on?</div><button class="${day==='orange'?'':'g'}" data-a="day" data-d="orange">${KIND.orange}</button><button class="${day==='white'?'':'g'}" data-a="day" data-d="white">${KIND.white}</button><div><button data-a="enter">Enter</button><button class="g" data-a="req">Request access</button></div><p class="m">${esc(msg)}</p><div class="mu">First time? Tap Request access, then come back once you're approved.</div>${FINE}</div>`;
+ if(v==='gate')h+=`<div class="card"><b>Who are you?</b><p style="margin:6px 0;color:#2f7d32">✅ Everyone who requests access will be approved by 6:30 PM.</p><input id="f" placeholder="First name" value="${esc(ff)}"><input id="l" placeholder="Last name" value="${esc(ll)}"><input id="n" placeholder="S number" value="${esc(nn)}"><input id="ph" type="tel" placeholder="Phone number (so I can message you where to meet)" value="${esc(pp)}"><div class="mu" style="margin-top:8px">Which A day do you want delivery on?</div><button class="${day==='orange'?'':'g'}" data-a="day" data-d="orange">${KIND.orange}</button><button class="${day==='white'?'':'g'}" data-a="day" data-d="white">${KIND.white}</button><div><button data-a="enter">Enter</button><button class="g" data-a="req">Request access</button></div><p class="m">${esc(msg)}</p><div class="mu">First time? Tap Request access, then come back once you're approved.</div>${FINE}</div>`;
  else if(v==='shop'){h+=`<p>Hi ${esc(me.f)}! Delivery: <b>${KIND[day]}</b></p><p class="m">${esc(msg)}</p>`;
   const act=mine.filter(o=>o.status!=='delivered'),pastN=mine.length-act.length;
   if(act.length)h+=`<div class="card"><b>Your orders</b>${act.map(o=>`<div class="mu" style="margin-top:6px">${o.qty} × ${esc(o.item_name)} — ${o.status==='scheduled'?'<b>Arriving '+fmt(o.delivery_date)+'</b> ('+KIND[o.day_kind]+')':'Waiting for a delivery date…'}</div>`).join('')}</div>`;
   if(pastN)h+=`<button class="g" data-a="past">Past orders (${pastN})</button>`;
-  items.forEach(i=>{const ok=i.qty>0;h+=`<div class="card row ${ok?'':'off'}"><div><b>${esc(i.name)}</b><div class="mu">$${Number(i.price).toFixed(2)} · ${ok?i.qty+' in stock':'Sold out'}</div></div>${ok?`<button data-a="pick" data-id="${i.id}">Order</button>`:''}</div>`});h+=FINE}
+  items.forEach(i=>{const ok=i.qty>0;h+=`<div class="card row ${ok?'':'off'}"><div style="display:flex;gap:10px;align-items:center">${i.image_url?`<img src="${esc(i.image_url)}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px">`:''}<div><b>${esc(i.name)}</b><div class="mu">$${Number(i.price).toFixed(2)} · ${ok?i.qty+' in stock':'Sold out'}</div></div></div>${ok?`<button data-a="pick" data-id="${i.id}">Order</button>`:''}</div>`});h+=FINE}
  else if(v==='past'){h+=`<div class="card"><b>Past orders</b>${mine.filter(o=>o.status==='delivered').map(o=>`<div class="mu" style="margin-top:6px">${o.qty} × ${esc(o.item_name)} — Delivered ✅${o.delivery_date?' '+fmt(o.delivery_date):''}</div>`).join('')||'<div class="mu">None yet.</div>'}<button class="g" data-a="shop">Back to snacks</button></div>`}
- else if(v==='order')h+=`<div class="card"><b>${esc(cur.name)}</b> · $${Number(cur.price).toFixed(2)} each<div class="row" style="margin:10px 0"><button class="g" data-a="dn">−</button><b>${q}</b><button class="g" data-a="up">+</button></div>Total: <b>$${(cur.price*q).toFixed(2)}</b><div class="mu">Delivery: ${KIND[day]}</div><p class="m">${esc(msg)}</p><button data-a="buy">Place order</button><button class="g" data-a="shop">Back</button>${FINE}</div>`;
- else h+=`<div class="card"><b>Order placed! ✅</b><p>I'll pick a delivery date soon. Come back and log in to see it under "Your orders".</p><p>I'll be sitting outside by a bench. You'll have to find me!</p><button data-a="shop">Back to snacks</button></div>`;
+ else if(v==='order')h+=`<div class="card">${cur.image_url?`<img src="${esc(cur.image_url)}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<b>${esc(cur.name)}</b> · $${Number(cur.price).toFixed(2)} each<div class="row" style="margin:10px 0"><button class="g" data-a="dn">−</button><b>${q}</b><button class="g" data-a="up">+</button></div>Total: <b>$${(cur.price*q).toFixed(2)}</b><div class="mu">Delivery: ${KIND[day]}</div><p class="m">${esc(msg)}</p><button data-a="buy">Place order</button><button class="g" data-a="shop">Back</button>${FINE}</div>`;
+ else h+=`<div class="card"><b>Order placed! ✅</b><p>I'll pick a delivery date soon. Come back and log in to see it under "Your orders".</p><p>I'll use your phone number to message you where to meet up at school.</p><button data-a="shop">Back to snacks</button></div>`;
  $('#app').innerHTML=h}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;msg='';
- if(v==='gate'&&$('#f')){ff=$('#f').value;ll=$('#l').value;nn=$('#n').value}
+ if(v==='gate'&&$('#f')){ff=$('#f').value;ll=$('#l').value;nn=$('#n').value;pp=$('#ph').value}
  try{
  if(a==='day')day=b.dataset.d;
- else if(a==='enter'||a==='req'){const f=ff.trim(),l=ll.trim(),n=nn.trim();
-  if(!f||!l||!n)msg='Fill in all three boxes.';else if(a==='enter'&&!day)msg='Pick Orange A day or White A day.';else{me={f,l,n};
-   const{data,error}=await sb.rpc(a==='enter'?'check_access':'request_access',{p_first:f,p_last:l,p_s:n});if(error)throw error;
+ else if(a==='enter'||a==='req'){const f=ff.trim(),l=ll.trim(),n=nn.trim(),p=pp.trim();
+  if(!f||!l||!n)msg='Fill in your name and S number.';else if(a==='req'&&p.replace(/\D/g,'').length<7)msg='Enter your phone number so I can reach you.';else if(a==='enter'&&!day)msg='Pick Orange A day or White A day.';else{me={f,l,n};
+   const{data,error}=await sb.rpc(a==='enter'?'check_access':'request_access',a==='enter'?{p_first:f,p_last:l,p_s:n}:{p_first:f,p_last:l,p_s:n,p_phone:p});if(error)throw error;
    if(a==='enter'){if(data==='approved'){await load();v='shop'}else msg={pending:'Still waiting for approval.',denied:'Not approved.',none:'No request found. Tap Request access.'}[data]||'Try again.'}
    else msg=data==='approved'?"You're already approved. Tap Enter.":data==='invalid'?'Check your entries.':"Request sent! Come back once you're approved."}}
  else if(a==='pick'){cur=items.find(i=>i.id==b.dataset.id);q=1;v='order'}
